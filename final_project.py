@@ -3,6 +3,7 @@ import unittest
 import mysql.connector
 from mysql.connector import errorcode
 import sys
+from datetime import datetime
 
 #Replace these with your credentials
 username = "wjgib"
@@ -29,9 +30,6 @@ class DAO():
             sys.exit("Connection failed: exiting.")
 
     def deploy_database(self):
-        
-        
-        
         pass
 
     def run(self, query):
@@ -59,12 +57,13 @@ class DAO():
         :return: Number of successful insertions
         :rtype: int
         """
+        if self.is_stub:
+            return len(batch)
+        
         if type(batch) is str:
             print("Incorrect parameter type: should be a list of messages")
             return -1
-        if self.is_stub:
-            return len(batch)
-
+        
         inserted = 0
         
         for message in batch:
@@ -94,6 +93,74 @@ class DAO():
                 print(e)
 
         return inserted
+
+    def delete_old_ais_messages(self): #How to test???
+
+        current_timestamp = datetime.timestamp(datetime.now())
+        #print(current_timestamp)
+
+        deleted = 0
+        
+        query = "select timestamp from AIS_MESSAGE;"
+        list_of_timestamps = self.run(query)
+
+        for item in list_of_timestamps:
+            if (item - current_timestamp) > 5:
+                query = "delete from AIS_MESSAGE where timestamp={};".format(item)
+                self.run(query)
+                deleted+=1
+        
+        return deleted
+
+    def read_recent_position_given_MMSI(self, MMSI):
+        query = """
+        select timestamp, MMSI, latitude, longitude, Vessel_IMO 
+        from ais_message, position_report 
+        where position_report.AISMessage_Id=ais_message.id and MMSI={} order by timestamp limit 1;""".format(MMSI)
+
+        document = self.run(query)
+        return document
+
+
+
+    def read_all_recent_ship_positions(self):
+        query = """
+        select MMSI, latitude, longitude, Vessel_IMO 
+        from ais_message, position_report 
+        where position_report.AISMessage_Id=ais_message.id order by timestamp limit 1;"""
+
+        document = self.run(query)
+        return document
+
+    #Help? What does this query look like? My attempts give me an empty set
+    #Attempt: select MMSI, latitude, longitude, AISIMO, name from ais_message, position_report, static_data where ais_message.id=position_report.AISMessage_Id and position_report.AISMessage_id=static_data.AISMessage_Id limit 10;
+    #results in an empty set?
+    def read_vessel_info(self, MMSI, IMO, name):
+        pass
+
+    def read_recent_positions_given_tile(self, tile_id):
+        pass
+
+    def read_all_ports_matching_name(self, port_name, country):
+        pass
+
+    def read_recent_positions_given_tile_and_port(self, port_name, country):
+        pass
+
+    def read_last_five_positions_given_MMSI(self, MMSI):
+        pass
+
+    def read_recent_ship_positions_headed_to_port_ID(self, port_id):
+        pass
+
+    def read_recent_ship_positions_headed_to_port(self, port_name, country):
+        pass
+
+    def lookup_contained_tiles(self, tile_id):
+        pass
+
+    def get_tile_PNG(self, tile_id):
+        pass
 
             
 
@@ -158,7 +225,8 @@ class TMB_test(unittest.TestCase):
                 {\"Timestamp\":\"2020-11-18T00:00:00.000Z\",\"Class\":\"AtoN\",\"MMSI\":992111840,\"MsgType\":\"static_data\",\"IMO\":\"Unknown\",\"Name\":\"WIND FARM BALTIC1NW\",\"VesselType\":\"Undefined\",\"Length\":60,\"Breadth\":60,\"A\":30,\"B\":30,\"C\":30,\"D\":30},
                 {\"Timestamp\":\"2020-11-18T00:00:00.000Z\",\"Class\":\"Class A\",\"MMSI\":219005465,\"MsgType\":\"position_report\",\"Position\":{\"type\":\"Point\",\"coordinates\":[54.572602,11.929218]},\"Status\":\"Under way using engine\",\"RoT\":0,\"SoG\":0,\"CoG\":298.7,\"Heading\":203},
                 {\"Timestamp\":\"2020-11-18T00:00:00.000Z\",\"Class\":\"Class A\",\"MMSI\":257961000,\"MsgType\":\"position_report\",\"Position\":{\"type\":\"Point\",\"coordinates\":[55.00316,12.809015]},\"Status\":\"Under way using engine\",\"RoT\":0,\"SoG\":0.2,\"CoG\":225.6,\"Heading\":240},
-                {\"Timestamp\":\"2020-11-18T00:00:00.000Z\",\"Class\":\"Class A\",\"MMSI\":376503000,\"MsgType\":\"position_report\",\"Position\":{\"type\":\"Point\",\"coordinates\":[54.519373,11.47914]},\"Status\":\"Under way using engine\",\"RoT\":0,\"SoG\":7.6,\"CoG\":294.4,\"Heading\":290} ]"""
+                {\"Timestamp\":\"2020-11-18T00:00:00.000Z\",\"Class\":\"Class A\",\"MMSI\":376503000,\"MsgType\":\"position_report\",\"Position\":{\"type\":\"Point\",\"coordinates\":[54.519373,11.47914]},\"Status\":\"Under way using engine\",\"RoT\":0,\"SoG\":7.6,\"CoG\":294.4,\"Heading\":290},
+                {\"Timestamp\":\"2020-11-18T00:06:00.000Z\",\"Class\":\"Class A\",\"MMSI\":376503000,\"MsgType\":\"position_report\",\"Position\":{\"type\":\"Point\",\"coordinates\":[54.519373,11.47914]},\"Status\":\"Under way using engine\",\"RoT\":0,\"SoG\":7.6,\"CoG\":294.4,\"Heading\":290} ]"""
 
     def test_insert_message_batch_interface_1( self  ):
         """
@@ -183,6 +251,45 @@ class TMB_test(unittest.TestCase):
         array = json.loads( self.batch )
         inserted_count = tmb.insert_message_batch( array )
         self.assertTrue( type(inserted_count) is  int and inserted_count >=0) 
+
+    def test_delete_old_message():
+        pass
+
+    def test_read_recent_position_given_MMSI(self, MMSI):
+        pass
+
+    def test_read_all_recent_ship_positions(self):
+        pass
+
+    def test_read_vessel_info(self, MMSI, IMO, name):
+        pass
+
+    def test_read_recent_positions_given_tile(self, tile_id):
+        pass
+
+    def test_read_all_ports_matching_name(self, port_name, country):
+        pass
+
+    def test_read_recent_positions_given_tile_and_port(self, port_name, country):
+        pass
+
+    def test_read_last_five_positions_given_MMSI(self, MMSI):
+        pass
+
+    def test_read_recent_ship_positions_headed_to_port_ID(self, port_id):
+        pass
+
+    def test_read_recent_ship_positions_headed_to_port(self, port_name, country):
+        pass
+
+    def test_lookup_contained_tiles(self, tile_id):
+        pass
+
+    def test_get_tile_PNG(self, tile_id):
+        pass
+
+    
+
 
 if __name__ == '__main__':
     unittest.main()
